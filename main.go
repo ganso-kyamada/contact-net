@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"github.com/PuerkitoBio/goquery"
+	"os"
+	"flag"
 )
 
 func main() {
-	get_url_info, err := goquery.NewDocument("https://www.fureai-net.city.kawasaki.jp/web/")
-	if err != nil {
-		log.Fatal(err)
-	}
+	uid := flag.String("i", "userid", "login user id")
+	pass := flag.String("p", "password", "login password")
+	url := os.Getenv("URL")
+	flag.Parse()
 
-	get_url_info.Find("#userId").Each(func(i int, s *goquery.Selection) {
-		fmt.Println("Hello GoLang!")
-	})
+	fmt.Printf("UserId: %s, Password: %s, URL: %s\n", *uid, *pass, url)
+	Reservation(*uid, *pass, url)
 }
-
