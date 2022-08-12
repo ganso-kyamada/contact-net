@@ -6,7 +6,6 @@ import (
 	"github.com/gocolly/colly"
 )
 
-
 const (
 	lpath = "/rsvWUserAttestationAction.do"
 	mpath = "/lotWTransLotAcceptListAction.do"
@@ -19,41 +18,45 @@ func Reservation(uid string, pass string, url string) {
 
 	c := colly.NewCollector()
 	c.OnHTML("input[name=loginJKey]", func(e *colly.HTMLElement) {
-		if (first) {
-			fmt.Println("Login...")
+		if first {
+			fmt.Printf("UID[%s] Login...\n", uid)
 			first = false
 			err := c.Post(login, map[string]string{
-				"userId": uid,
-				"password": pass,
+				"userId":    uid,
+				"password":  pass,
 				"displayNo": "pawab2000",
 				"loginJKey": e.Attr("value"),
 			})
 			if err != nil {
-				fmt.Println("Error!!!", err)
+				fmt.Printf("UID[%s] Error!!! %s\n", uid, err)
 			}
 		}
 	})
 
 	c.OnHTML("input.logoutbtn", func(e *colly.HTMLElement) {
-		if (e.Request.URL.String() == login) {
-			fmt.Println("Login suceess!!")
+		if e.Request.URL.String() == login {
+			fmt.Printf("UID[%s] Login suceess!!\n", uid)
 			err := c.Post(menu, map[string]string{
-				"displayNo": "plwac3000",
+				"displayNo":       "plwac3000",
 				"selectPpsPpsdCd": "100",
-				"selectPpsCd": "100130",
+				"selectPpsCd":     "100130",
 			})
 			if err != nil {
-				fmt.Println("Error!!!", err)
+				fmt.Printf("UID[%s] Error!!! %s\n", uid, err)
 			}
 		}
 
-		if (e.Request.URL.String() == menu) {
-			fmt.Println("TODO: Baseball field reservation")
+		if e.Request.URL.String() == menu {
+			fmt.Printf("UID[%s] TODO: Baseball field reservation\n", uid)
 		}
 	})
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Request", r.URL)
+		fmt.Printf("UID[%s] Request %s\n", uid, r.URL)
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Printf("UID[%s] Response code %d\n", uid, r.StatusCode)
 	})
 
 	c.Visit(url)
