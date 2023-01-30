@@ -52,7 +52,9 @@ func Reservation(path resources.Path, user resources.User, schedule resources.Sc
 
 	c.OnHTML("input[name=insLotJKey]", func(e *colly.HTMLElement) {
 		fmt.Printf("UID[%s] exists insLotJKey %s\n", user.ID, e.Request.URL.String())
-		visitComplete(c, path.Complete, schedule, e.Attr("value"))
+		if (path.Complete != e.Request.URL.String()) {
+			visitComplete(c, path.Complete, schedule, e.Attr("value"))
+		}
 	})
 
 	c.OnRequest(func(r *colly.Request) {
