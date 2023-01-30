@@ -2,7 +2,9 @@ version: "3"
 services:
   app:
     build: .
+    command: sh -c "/bin/bash"
     env_file: .env
     tty: true
     volumes:
-      - .:/go/src
+      - .:/app
+    working_dir: /app

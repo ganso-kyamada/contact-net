@@ -1,42 +1,16 @@
-package main
+package handlers
 
 import (
 	"fmt"
+	"ganso-kyamada/contact-net/internal/resources"
 
 	"github.com/gocolly/colly"
 )
 
-type Path struct {
-	Login         string
-	Menu          string
-	Lottery       string
-	GroundMenu    string
-	GroundNumMenu string
-	Apply         string
-	Complete      string
-}
-
-func Reservation(user User) {
-	num := 0
-	first := true
-	path := Path{
-		Login:         user.Url + "/rsvWUserAttestationAction.do",
-		Menu:          user.Url + "/lotWTransLotAcceptListAction.do",
-		Lottery:       user.Url + "/lotWTransLotBldGrpAction.do",
-		GroundMenu:    user.Url + "/lotWTransLotInstGrpAction.do",
-		GroundNumMenu: user.Url + "/lotWTransLotInstSrchVacantAction.do",
-		Apply:         user.Url + "/lotWInstTempLotApplyAction.do",
-		Complete:      user.Url + "/lotWInstLotApplyAction.do",
-	}
-
+func Reservation(path resources.Path, user resources.User, schedule resources.Schedule) {
 	c := colly.NewCollector()
 	c.OnHTML("input[name=loginJKey]", func(e *colly.HTMLElement) {
-		if !first {
-			return
-		}
-
 		fmt.Printf("UID[%s] Login...\n", user.ID)
-		first = false
 		err := c.Post(path.Login, map[string]string{
 			"userId":     user.ID,
 			"password":   user.Password,
@@ -59,34 +33,26 @@ func Reservation(user User) {
 			visitLotteryPage(c, path.Lottery)
 		case path.Lottery:
 			fmt.Printf("UID[%s] Lottery\n", user.ID)
-			visitGroundMenu(c, path.GroundMenu, user.Schedules[num])
+			visitGroundMenu(c, path.GroundMenu, schedule)
 		case path.GroundMenu:
 			fmt.Printf("UID[%s] GroundMenu\n", user.ID)
-			schedule := user.Schedules[num]
-			if len(schedule.Places) == 2 && schedule.Places[1] != "" {
+			// INFO: 複数のグラウンドがあった場合（第一運動場、第二運動場など）
+			if len(schedule.Places) > 1 {
 				visitGroundNumMenu(c, path.GroundNumMenu, schedule)
 			} else {
 				visitApply(c, path.Apply, schedule)
 			}
 		case path.GroundNumMenu:
 			fmt.Printf("UID[%s] GroundNumMenu\n", user.ID)
-			visitApply(c, path.Apply, user.Schedules[num])
+			visitApply(c, path.Apply, schedule)
 		case path.Complete:
 			fmt.Printf("UID[%s] Complete!!\n", user.ID)
-			if len(user.Schedules) > num+1 {
-				num += 1
-				visitMenuPage(c, path.Menu)
-			}
 		}
 	})
 
 	c.OnHTML("input[name=insLotJKey]", func(e *colly.HTMLElement) {
-		if len(user.Schedules) <= num+1 {
-			return
-		}
-
 		fmt.Printf("UID[%s] exists insLotJKey %s\n", user.ID, e.Request.URL.String())
-		visitComplete(c, path.Complete, user.Schedules[num], e.Attr("value"))
+		visitComplete(c, path.Complete, schedule, e.Attr("value"))
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -96,8 +62,7 @@ func Reservation(user User) {
 	c.OnResponse(func(r *colly.Response) {
 		fmt.Printf("UID[%s] Response code %d\n", user.ID, r.StatusCode)
 	})
-
-	c.Visit(user.Url)
+	c.Visit(path.Url)
 }
 
 func visitMenuPage(c *colly.Collector, path string) {
@@ -115,15 +80,14 @@ func visitLotteryPage(c *colly.Collector, path string) {
 	})
 }
 
-func visitGroundMenu(c *colly.Collector, path string, schedule Schedule) {
+func visitGroundMenu(c *colly.Collector, path string, schedule resources.Schedule) {
 	c.Post(path, map[string]string{
 		"displayNo":      "plwba1000",
 		"selectBldGrpCd": schedule.Places[0],
 	})
 }
 
-func visitGroundNumMenu(c *colly.Collector, path string, schedule Schedule) {
-	// INFO: 複数のグラウンドがあった場合（第一運動場、第二運動場など）
+func visitGroundNumMenu(c *colly.Collector, path string, schedule resources.Schedule) {
 	c.Post(path, map[string]string{
 		"displayNo":       "plwba2000",
 		"selectBldGrpCd":  schedule.Places[1],
@@ -131,7 +95,7 @@ func visitGroundNumMenu(c *colly.Collector, path string, schedule Schedule) {
 	})
 }
 
-func visitApply(c *colly.Collector, path string, schedule Schedule) {
+func visitApply(c *colly.Collector, path string, schedule resources.Schedule) {
 	c.Post(path, map[string]string{
 		"selectFieldCnt":  "1",
 		"displayNo":       "plwba3000",
@@ -145,7 +109,7 @@ func visitApply(c *colly.Collector, path string, schedule Schedule) {
 	})
 }
 
-func visitComplete(c *colly.Collector, path string, schedule Schedule, insLotJKey string) {
+func visitComplete(c *colly.Collector, path string, schedule resources.Schedule, insLotJKey string) {
 	c.Post(path, map[string]string{
 		"displayNo":       "plwca1000",
 		"applyPepopleNum": schedule.People,

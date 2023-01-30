@@ -1,7 +1,7 @@
-FROM golang:1.19.0-alpine3.16
+FROM golang:1.19.4-alpine3.16
 
-WORKDIR /go/src
+WORKDIR /app
 
-RUN apk update
+RUN apk update && apk add bash
 
 CMD [ "go", "mod", "tidy" ]
